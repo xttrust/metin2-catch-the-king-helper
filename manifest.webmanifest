@@ -1,0 +1,23 @@
+{
+  "name": "Catch the King Helper",
+  "short_name": "CTK Helper",
+  "description": "Solver, trainer and move review for the Metin2 'Catch the King' mini-game.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#120d0a",
+  "theme_color": "#120d0a",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

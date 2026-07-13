@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Catch the King Helper — Metin2 Solver, Practice & Review</title>
+  <meta name="description" content="Free solver, trainer and move-review for the Metin2 'Catch the King' event mini-game. Live gold-chance, 5-probability heatmap, practice mode without wasting King Decks, and post-game blunder review." />
+  <meta name="theme-color" content="#120d0a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="lacquer-bg" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="crown" viewBox="0 0 32 24" aria-hidden="true"><path d="M2 20h28l-2-12-7 5-5-9-5 9-7-5z" fill="currentColor"/><rect x="2" y="21" width="28" height="2.5" rx="1" fill="currentColor" opacity=".7"/></svg>
+      <h1 data-i18n="app.title">Catch the King</h1>
+      <span class="brand-sub" data-i18n="app.subtitle">helper</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="play" data-i18n="nav.helper">Helper</button>
+      <button class="tab" data-view="practice" data-i18n="nav.practice">Practice</button>
+      <button class="tab" data-view="review" data-i18n="nav.review">Review</button>
+      <button class="tab" data-view="stats" data-i18n="nav.stats">Stats</button>
+      <button class="tab" data-view="help" data-i18n="nav.help">Rules</button>
+    </nav>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button data-lang="en">EN</button>
+      <button data-lang="de">DE</button>
+      <button data-lang="ro">RO</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ======================= PLAY (helper + practice) ======================= -->
+    <section id="view-play" class="view">
+      <div class="play-grid">
+        <aside class="panel side-left">
+          <div class="card-now">
+            <div class="label" data-i18n="panel.currentCard">Current card</div>
+            <div class="hand-big" id="handBig">1</div>
+            <div class="hand-track" id="handTrack"></div>
+          </div>
+          <div class="score-box">
+            <div class="gauge-wrap">
+              <svg id="chestGauge" viewBox="0 0 120 120" aria-hidden="true"></svg>
+              <div class="gauge-center">
+                <div class="score-val" id="scoreVal">0</div>
+                <div class="score-target" id="scoreTarget">/ 550</div>
+              </div>
+            </div>
+            <div class="goldchance">
+              <span class="label" data-i18n="panel.goldChance">Gold chance</span>
+              <span class="gc-val" id="goldChance">—</span>
+            </div>
+          </div>
+          <div class="remaining-box">
+            <div class="label" data-i18n="panel.remaining">Still hidden</div>
+            <div class="remaining-grid" id="remainingGrid"></div>
+          </div>
+        </aside>
+
+        <div class="center-col">
+          <div class="mode-banner" id="modeBanner"></div>
+          <div class="board" id="board" role="grid"></div>
+          <div class="suggest-bar" id="suggestBar">
+            <div class="suggest-pulse" aria-hidden="true"></div>
+            <div class="suggest-text" id="suggestText" data-i18n="suggest.thinking">Analyzing…</div>
+          </div>
+          <div class="board-actions">
+            <button id="btnUndo" class="ghost" data-i18n="action.undo">Undo</button>
+            <button id="btnRedo" class="ghost" data-i18n="action.redo">Redo</button>
+            <button id="btnHeat" class="ghost toggled" data-i18n="action.heatmap">5-heatmap</button>
+            <button id="btnNew" class="primary" data-i18n="action.newGame">New game</button>
+          </div>
+        </div>
+
+        <aside class="panel side-right">
+          <div class="top-moves">
+            <div class="label" data-i18n="panel.topMoves">Best moves</div>
+            <ol id="topMoves"></ol>
+          </div>
+          <div class="coach-box" id="coachBox" hidden>
+            <div class="label" data-i18n="practice.coach">Coach</div>
+            <div id="coachText"></div>
+          </div>
+          <div class="keys-help">
+            <div class="label" data-i18n="panel.keys">Keyboard</div>
+            <ul class="keys" id="keysHelp"></ul>
+          </div>
+        </aside>
+      </div>
+
+      <!-- tap-input bottom sheet -->
+      <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+      <div class="sheet" id="picker" hidden>
+        <div class="sheet-title" id="pickerTitle"></div>
+        <div class="picker-values" id="pickerValues"></div>
+        <label class="flash-toggle" id="flashToggleWrap">
+          <input type="checkbox" id="flashToggle" />
+          <span class="flash-dot" aria-hidden="true"></span>
+          <span data-i18n="picker.flashed">Card flashed (red glow)</span>
+        </label>
+        <div class="picker-actions">
+          <button class="ghost" id="pickerCancel" data-i18n="action.cancel">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= REVIEW ======================= -->
+    <section id="view-review" class="view" hidden>
+      <div class="review-head">
+        <h2 data-i18n="review.title">Game review</h2>
+        <p class="muted" data-i18n="review.blurb">Every move is re-evaluated by the solver. See where your gold chance was won or lost.</p>
+        <div id="reviewPick"></div>
+      </div>
+      <div class="review-body" id="reviewBody"></div>
+    </section>
+
+    <!-- ======================= STATS ======================= -->
+    <section id="view-stats" class="view" hidden>
+      <div class="stats-head">
+        <h2 data-i18n="stats.title">Your record</h2>
+        <div class="stats-actions">
+          <button class="ghost" id="btnExport" data-i18n="stats.export">Export</button>
+          <button class="ghost" id="btnImport" data-i18n="stats.import">Import</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+          <button class="ghost danger" id="btnWipe" data-i18n="stats.wipe">Reset stats</button>
+        </div>
+      </div>
+      <div class="stats-body" id="statsBody"></div>
+    </section>
+
+    <!-- ======================= HELP ======================= -->
+    <section id="view-help" class="view help-view" hidden>
+      <article id="helpArticle" class="help-article"></article>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span data-i18n="foot.line">Free &amp; open-source fan tool. Not affiliated with Gameforge.</span>
+    <a href="https://github.com/xttrust/metin2-catch-the-king-helper" rel="noopener">GitHub</a>
+  </footer>
+
+  <script type="module" src="js/ui/main.js"></script>
+</body>
+</html>
