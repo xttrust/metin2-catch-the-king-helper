@@ -253,11 +253,16 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
 .board {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: clamp(5px, 1vw, 10px);
+  gap: clamp(4px, 0.9vw, 9px);
   width: 100%;
-  max-width: 620px;
+  /* fit the whole 5x5 board on screen: cap by viewport height as well as
+     width (board height ≈ width / 0.8 with 4:5 cards + chrome around it),
+     so a half-screen window next to the game never needs to scroll */
+  max-width: min(560px, calc((100vh - 260px) * 0.8));
+  max-width: min(560px, calc((100dvh - 260px) * 0.8));
   margin: 0 auto;
   perspective: 1200px;
+  container-type: inline-size;
 }
 .cell {
   aspect-ratio: 4 / 5;
@@ -320,7 +325,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
   right: 8%;
   z-index: 1;
   font-family: var(--mono);
-  font-size: clamp(0.55rem, 1.4vw, 0.72rem);
+  font-size: clamp(0.55rem, 1.3vmin, 0.72rem);
+  font-size: clamp(0.55rem, 1.9cqw, 0.72rem);
   color: rgba(236, 224, 200, 0.85);
   background: rgba(0, 0, 0, 0.45);
   padding: 1px 5px;
@@ -342,7 +348,9 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
 .face.front .val {
   font-family: var(--display);
   font-weight: 900;
-  font-size: clamp(1.5rem, 5.2vw, 2.6rem);
+  /* scale with the board (cqw), not the window; vmin fallback pre-cq */
+  font-size: clamp(1.1rem, 4.2vmin, 2.6rem);
+  font-size: clamp(1.1rem, 7cqw, 2.6rem);
   line-height: 1;
 }
 .cell.vK .face.front .val { color: #8a1f12; }
@@ -358,7 +366,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
   position: absolute;
   bottom: 3%;
   right: 9%;
-  font-size: clamp(0.7rem, 1.8vw, 0.95rem);
+  font-size: clamp(0.7rem, 1.6vmin, 0.95rem);
+  font-size: clamp(0.7rem, 2.5cqw, 0.95rem);
   color: var(--gold-hi);
 }
 /* face-up, not yet claimable by this hand card: muted, hatched */
