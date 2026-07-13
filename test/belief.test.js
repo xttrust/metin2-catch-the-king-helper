@@ -14,7 +14,7 @@ import {
 import {
   enumerate5Placements,
   fiveProbabilities,
-  fiveZoneRisk,
+  adjacentFiveRisk,
   valueDistribution,
   sampleBoard,
   dealBoard,
@@ -92,23 +92,42 @@ test('event-time constraints beat state-time reconstruction', () => {
   assert.ok(p[1] + p[5] >= 1 - 1e-12);
 });
 
-test('fiveZoneRisk: exact P(hidden 5 on or next to cell)', () => {
+test('adjacentFiveRisk: exact P(hidden 5 next to cell), cell itself excluded', () => {
   const g = newGame();
-  const r = fiveZoneRisk(g);
+  const r = adjacentFiveRisk(g);
   const C = (n, k) => {
     let v = 1;
     for (let i = 0; i < k; i++) v = (v * (n - i)) / (i + 1);
     return v;
   };
-  // Fresh board: risk = 1 - C(25 - zone, 3) / C(25, 3), zone = cell + neighbors.
-  assert.ok(Math.abs(r[0] - (1 - C(21, 3) / C(25, 3))) < 1e-12); // corner, zone 4
-  assert.ok(Math.abs(r[12] - (1 - C(16, 3) / C(25, 3))) < 1e-12); // center, zone 9
+  // Fresh board: risk = 1 - C(25 - neighbors, 3) / C(25, 3).
+  assert.ok(Math.abs(r[0] - (1 - C(22, 3) / C(25, 3))) < 1e-12); // corner, 3 neighbors
+  assert.ok(Math.abs(r[12] - (1 - C(17, 3) / C(25, 3))) < 1e-12); // center, 8 neighbors
   // All three 5s revealed: nothing left to fear anywhere.
   reveal(g, 0, 5, false);
   reveal(g, 12, 5, false);
   reveal(g, 24, 5, false);
-  const r2 = fiveZoneRisk(g);
+  const r2 = adjacentFiveRisk(g);
   for (let i = 0; i < 25; i++) assert.equal(r2[i], 0);
+});
+
+test('pinned 5: neighbors of a no-flash reveal are 0% a 5 yet 100% capture zone', () => {
+  // Field report (2026-07-14 screenshot): flash on the 4 at the corner, then
+  // a no-flash 3 below — the 5 is pinned, and the cells around the 3 must
+  // show "not a 5" even though some sit right next to the pinned 5.
+  const g = newGame();
+  reveal(g, 0, 4, true); // corner flash: a 5 among {1, 5, 6}
+  reveal(g, 10, 3, false); // no flash: {5, 6, 11, 15, 16} are not 5s
+  const placements = enumerate5Placements(g);
+  const p = fiveProbabilities(g, placements);
+  const r = adjacentFiveRisk(g, placements);
+  assert.ok(p[1] >= 1 - 1e-12, 'the 5 is pinned at cell 1');
+  for (const c of [5, 6, 11, 15, 16]) assert.equal(p[c], 0, `cell ${c} cannot be a 5`);
+  // Cell 5 is not a 5, but it borders the pinned 5: certain capture zone.
+  assert.ok(r[5] >= 1 - 1e-12);
+  // Cell 15 borders no possible 5-cell of the pinned placement... unless the
+  // other two 5s wander next to it — risk must stay strictly below 1.
+  assert.ok(r[15] < 1);
 });
 
 test('value distribution is a proper posterior', () => {

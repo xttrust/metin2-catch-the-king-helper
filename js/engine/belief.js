@@ -82,17 +82,17 @@ export function fiveProbabilities(state, placements = enumerate5Placements(state
   return p;
 }
 
-// P(a face-down 5 is on or adjacent to each cell), as a Float64Array(25) —
-// the "5-zone" danger behind the board's green/red safety tint. Exact over
-// the enumerated placements, like fiveProbabilities.
-export function fiveZoneRisk(state, placements = enumerate5Placements(state)) {
+// P(a face-down 5 is adjacent to each cell), as a Float64Array(25) — the
+// hand-5 capture danger. The cell itself is excluded on purpose: revealing
+// the 5 with your 5 is a tie (+50), only a *neighboring* hidden 5 captures.
+// Exact over the enumerated placements, like fiveProbabilities.
+export function adjacentFiveRisk(state, placements = enumerate5Placements(state)) {
   const r = new Float64Array(25);
   if (!placements.length) return r;
   for (let i = 0; i < 25; i++) {
-    const zone = NEIGHBOR_MASKS[i] | (1 << i);
     let hits = 0;
     for (const pl of placements) {
-      if (pl & zone) hits++;
+      if (pl & NEIGHBOR_MASKS[i]) hits++;
     }
     r[i] = hits / placements.length;
   }

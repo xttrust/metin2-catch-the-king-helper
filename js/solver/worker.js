@@ -11,7 +11,7 @@ import {
 import {
   enumerate5Placements,
   fiveProbabilities,
-  fiveZoneRisk,
+  adjacentFiveRisk,
   valueDistribution,
   sampleBoard,
   validate,
@@ -84,7 +84,7 @@ async function analyze(msg) {
 
   const ctx = buildContext(state);
   const p5 = Array.from(fiveProbabilities(state, ctx.placements));
-  const risk = Array.from(fiveZoneRisk(state, ctx.placements));
+  const risk = Array.from(adjacentFiveRisk(state, ctx.placements));
   const dist = Array.from(valueDistribution(state, ctx.placements));
 
   if (state.over) {

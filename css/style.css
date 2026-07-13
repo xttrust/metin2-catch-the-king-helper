@@ -28,8 +28,8 @@
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
-/* Registered so the green->red safety tint can animate smoothly. */
-@property --risk {
+/* Registered so the green->red 5-probability tint can animate smoothly. */
+@property --p5 {
   syntax: '<number>';
   inherits: true;
   initial-value: 0;
@@ -282,7 +282,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
   position: relative;
   border-radius: 9px;
   outline-offset: 3px;
-  transition: --risk 0.6s ease;
+  transition: --p5 0.6s ease;
 }
 .cell:focus-visible { outline: 2px solid var(--gold); }
 .cell-inner {
@@ -330,8 +330,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
   border-radius: 6px;
   transform: rotate(45deg) scale(0.78);
 }
-/* safety tint scaled by --risk = P(a hidden 5 is on or next to this card):
-   green (safe to touch on the 5-turn) sweeps through amber to deep red */
+/* heat tint scaled by --p5 = P(this card IS a 5):
+   green (provably not a 5) sweeps through amber to deep red (likely a 5) */
 .heat .face.back::after {
   content: '';
   position: absolute;
@@ -339,10 +339,21 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px clamp(10px, 2.5vw, 28px)
   border-radius: 8px;
   background: radial-gradient(
     85% 85% at 50% 55%,
-    hsl(calc((1 - var(--risk)) * 120) 65% 45% / calc(0.14 + var(--risk) * 0.6)),
+    hsl(calc((1 - var(--p5)) * 120) 65% 45% / calc(0.14 + var(--p5) * 0.6)),
     transparent 78%
   );
-  box-shadow: inset 0 0 0 2px hsl(calc((1 - var(--risk)) * 120) 70% 52% / calc(0.28 + var(--risk) * 0.45));
+  box-shadow: inset 0 0 0 2px hsl(calc((1 - var(--p5)) * 120) 70% 52% / calc(0.28 + var(--p5) * 0.45));
+}
+/* provably next to a hidden 5 ("5 e pe lângă"): the hand-5 capture zone.
+   Same red-dot language as flashed cards, plus a dashed red rim. */
+.cell.danger5 .face.back { border: 1px dashed var(--red-hi); }
+.cell.danger5 .face.back .flashmark {
+  display: block;
+  animation: dotPulse 1.3s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(236, 106, 80, 0.9); }
+  50% { transform: scale(1.35); box-shadow: 0 0 14px rgba(236, 106, 80, 1); }
 }
 .cell .p5chip {
   position: absolute;

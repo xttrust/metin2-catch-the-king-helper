@@ -19,7 +19,7 @@ export function buildBoard(onCellTap, onCellHover) {
     btn.setAttribute('aria-label', cellName(i));
     btn.innerHTML = `
       <div class="cell-inner">
-        <div class="face back"><span class="fivestar"></span><span class="p5chip"></span></div>
+        <div class="face back"><span class="fivestar"></span><span class="flashmark"></span><span class="p5chip"></span></div>
         <div class="face front"><span class="val"></span><span class="flashmark"></span></div>
       </div>`;
     btn.addEventListener('click', () => onCellTap(i));
@@ -55,6 +55,11 @@ export function renderBoard(state, opts = {}) {
     // Proven face-down 5: the solver knows the value, so show it flipped.
     const p = !revealed && p5 ? p5[i] : 0;
     const sure = p >= P5_SURE;
+    // Provably next to a hidden 5 ("5 e pe lângă"): hand-5 capture zone.
+    // Independent of the cell's own value — a card can be 0% a 5 and still
+    // sit in the capture zone of a located 5.
+    const danger = !revealed && !sure && risk != null && risk[i] >= P5_SURE;
+    el.classList.toggle('danger5', danger);
     el.classList.toggle('revealed', revealed);
     el.classList.toggle('scored', revealed && scored);
     el.classList.toggle('unscored', revealed && !scored);
@@ -77,16 +82,15 @@ export function renderBoard(state, opts = {}) {
       const likely = !sure && p >= P5_LIKELY;
       star.textContent = likely ? '5?' : '';
       star.classList.toggle('likely', likely);
-      // Safety tint: green = no 5 on or next to this card, red = 5 zone.
+      // Heat tint + chip: P(this card IS a 5) — green = provably not a 5.
       const chip = el.querySelector('.p5chip');
-      const rk = risk ? risk[i] : 0;
-      if (risk && heat && !sure) {
-        el.style.setProperty('--risk', rk.toFixed(3));
-        chip.textContent = rk <= 0.001 ? '✓' : `${Math.round(rk * 100)}%`;
-        chip.classList.toggle('safe', rk <= 0.001);
-        chip.classList.toggle('hot', rk >= 0.5);
+      if (p5 && heat && !sure) {
+        el.style.setProperty('--p5', p.toFixed(3));
+        chip.textContent = p <= 0.001 ? '✓' : `${Math.round(p * 100)}%`;
+        chip.classList.toggle('safe', p <= 0.001);
+        chip.classList.toggle('hot', p >= 0.4);
       } else {
-        el.style.setProperty('--risk', '0');
+        el.style.setProperty('--p5', '0');
         chip.textContent = '';
         chip.classList.remove('safe', 'hot');
       }
