@@ -34,12 +34,13 @@ export function buildBoard(onCellTap, onCellHover) {
 
 const vLabel = (v) => (v === KING ? 'K' : String(v));
 
-// Probability thresholds for the spiky 5-discovery badges.
+// Probability thresholds: SURE flips the card open as a proven 5,
+// LIKELY shows the spiky "5?" badge.
 const P5_SURE = 0.999;
 const P5_LIKELY = 0.4;
 
 export function renderBoard(state, opts = {}) {
-  const { p5 = null, heat = true, hintCell = -1, hint2Cells = [] } = opts;
+  const { p5 = null, risk = null, heat = true, hintCell = -1, hint2Cells = [] } = opts;
   const hand = state.over ? 0 : HAND_SEQUENCE[state.handIndex];
   for (let i = 0; i < 25; i++) {
     const el = cells[i];
@@ -51,6 +52,9 @@ export function renderBoard(state, opts = {}) {
     // does not lose to it — these are the "active" cells.
     const catchable =
       revealed && !scored && !state.over && compare(hand, state.values[i]) !== 'lose';
+    // Proven face-down 5: the solver knows the value, so show it flipped.
+    const p = !revealed && p5 ? p5[i] : 0;
+    const sure = p >= P5_SURE;
     el.classList.toggle('revealed', revealed);
     el.classList.toggle('scored', revealed && scored);
     el.classList.toggle('unscored', revealed && !scored);
@@ -58,6 +62,7 @@ export function renderBoard(state, opts = {}) {
     el.classList.toggle('flashed', flashed);
     el.classList.toggle('vK', state.values[i] === KING);
     el.classList.toggle('v5', revealed && state.values[i] === 5);
+    el.classList.toggle('known5', sure);
     el.classList.toggle('hint', i === hintCell);
     el.classList.toggle('hint2', hint2Cells.includes(i) && i !== hintCell);
     el.classList.toggle('heat', heat && !revealed);
@@ -65,24 +70,23 @@ export function renderBoard(state, opts = {}) {
     if (revealed) {
       el.querySelector('.val').textContent = vLabel(state.values[i]);
       star.textContent = '';
-      star.classList.remove('sure', 'likely');
+      star.classList.remove('likely');
     } else {
-      el.querySelector('.val').textContent = '';
+      el.querySelector('.val').textContent = sure ? '5' : '';
       // 5-discovery badge: always on, independent of the heatmap toggle.
-      const p = p5 ? p5[i] : 0;
-      const sure = p >= P5_SURE;
       const likely = !sure && p >= P5_LIKELY;
-      star.textContent = sure ? '5!' : likely ? '5?' : '';
-      star.classList.toggle('sure', sure);
+      star.textContent = likely ? '5?' : '';
       star.classList.toggle('likely', likely);
+      // Safety tint: green = no 5 on or next to this card, red = 5 zone.
       const chip = el.querySelector('.p5chip');
-      if (p5 && heat) {
-        el.style.setProperty('--p5', p.toFixed(3));
-        chip.textContent = p <= 0.001 ? '✓' : `${Math.round(p * 100)}%`;
-        chip.classList.toggle('safe', p <= 0.001);
-        chip.classList.toggle('hot', p >= 0.4);
+      const rk = risk ? risk[i] : 0;
+      if (risk && heat && !sure) {
+        el.style.setProperty('--risk', rk.toFixed(3));
+        chip.textContent = rk <= 0.001 ? '✓' : `${Math.round(rk * 100)}%`;
+        chip.classList.toggle('safe', rk <= 0.001);
+        chip.classList.toggle('hot', rk >= 0.5);
       } else {
-        el.style.setProperty('--p5', '0');
+        el.style.setProperty('--risk', '0');
         chip.textContent = '';
         chip.classList.remove('safe', 'hot');
       }

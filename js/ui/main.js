@@ -115,6 +115,7 @@ function paintBoard() {
   const hint2 = lastAnalysis?.top ? lastAnalysis.top.slice(1, 3).map((m) => m.cell) : [];
   renderBoard(state, {
     p5: lastAnalysis?.p5 ?? null,
+    risk: lastAnalysis?.risk ?? null,
     heat: heatOn,
     hintCell,
     hint2Cells: hint2,

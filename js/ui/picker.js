@@ -68,7 +68,7 @@ export function askCatch(state, cell, ambiguous) {
     valuesEl.appendChild(ok);
     if (ambiguous) {
       const cap = document.createElement('button');
-      cap.className = 'pv pvK';
+      cap.className = 'pv pvDanger';
       cap.style.aspectRatio = 'auto';
       cap.style.gridColumn = 'span 3';
       cap.style.padding = '12px';

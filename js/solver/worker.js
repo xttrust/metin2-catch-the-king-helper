@@ -11,6 +11,7 @@ import {
 import {
   enumerate5Placements,
   fiveProbabilities,
+  fiveZoneRisk,
   valueDistribution,
   sampleBoard,
   validate,
@@ -83,12 +84,13 @@ async function analyze(msg) {
 
   const ctx = buildContext(state);
   const p5 = Array.from(fiveProbabilities(state, ctx.placements));
+  const risk = Array.from(fiveZoneRisk(state, ctx.placements));
   const dist = Array.from(valueDistribution(state, ctx.placements));
 
   if (state.over) {
     postMessage({
       type: 'analysis', phase: 'final', gen, reqId: msg.reqId,
-      p5, dist, suggestion: null, top: [], pGold: state.score >= GOLD_THRESHOLD ? 1 : 0,
+      p5, risk, dist, suggestion: null, top: [], pGold: state.score >= GOLD_THRESHOLD ? 1 : 0,
     });
     return;
   }
@@ -117,7 +119,7 @@ async function analyze(msg) {
   }));
   postMessage({
     type: 'analysis', phase: 'fast', gen, reqId: msg.reqId,
-    p5, dist,
+    p5, risk, dist,
     suggestion: fastMove && {
       ...fastMove,
       kind2: fastKind,
@@ -142,7 +144,7 @@ async function analyze(msg) {
       const useExact = exact.p > 0.001 && exact.p < 0.999;
       postMessage({
         type: 'analysis', phase: 'exact', gen, reqId: msg.reqId,
-        p5, dist,
+        p5, risk, dist,
         suggestion: useExact
           ? { ...exact.move, kind2: 'exact', reasons: ['reason.exact'] }
           : undefined, // keep fast suggestion; p is still exact
@@ -189,7 +191,7 @@ async function analyze(msg) {
   }
   postMessage({
     type: 'analysis', phase: 'full', gen, reqId: msg.reqId,
-    p5, dist,
+    p5, risk, dist,
     suggestion: opener || free ? undefined : { kind: scored[0].kind, cell: scored[0].cell, kind2: 'rollout', reasons: scored[0].reasons },
     top: scored,
     pGold: scored[0].pGold,

@@ -14,6 +14,7 @@ import {
 import {
   enumerate5Placements,
   fiveProbabilities,
+  fiveZoneRisk,
   valueDistribution,
   sampleBoard,
   dealBoard,
@@ -89,6 +90,25 @@ test('event-time constraints beat state-time reconstruction', () => {
   }
   const p = fiveProbabilities(g, placements);
   assert.ok(p[1] + p[5] >= 1 - 1e-12);
+});
+
+test('fiveZoneRisk: exact P(hidden 5 on or next to cell)', () => {
+  const g = newGame();
+  const r = fiveZoneRisk(g);
+  const C = (n, k) => {
+    let v = 1;
+    for (let i = 0; i < k; i++) v = (v * (n - i)) / (i + 1);
+    return v;
+  };
+  // Fresh board: risk = 1 - C(25 - zone, 3) / C(25, 3), zone = cell + neighbors.
+  assert.ok(Math.abs(r[0] - (1 - C(21, 3) / C(25, 3))) < 1e-12); // corner, zone 4
+  assert.ok(Math.abs(r[12] - (1 - C(16, 3) / C(25, 3))) < 1e-12); // center, zone 9
+  // All three 5s revealed: nothing left to fear anywhere.
+  reveal(g, 0, 5, false);
+  reveal(g, 12, 5, false);
+  reveal(g, 24, 5, false);
+  const r2 = fiveZoneRisk(g);
+  for (let i = 0; i < 25; i++) assert.equal(r2[i], 0);
 });
 
 test('value distribution is a proper posterior', () => {

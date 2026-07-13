@@ -30,17 +30,17 @@ export const ro = {
   'picker.catch': 'Prinzi {cell} cu {hand}?',
   'picker.catchBtn': 'Prinde (+{pts})',
   'picker.captured': '5-ul meu a fost capturat',
-  'picker.flashed': 'Cartea a licărit (strălucire roșie)',
+  'picker.flashed': '5 lângă (cartea a strălucit roșu)',
 
   'keys.hover': 'cursor pe carte + cifră = întoarce',
-  'keys.shift': 'cu licărire',
+  'keys.shift': 'cu 5 lângă (strălucire roșie)',
   'keys.select': 'click pe carte ascunsă = o selectezi',
   'keys.click': 'click pe carte întoarsă = prindere instant',
   'keys.undo': 'înapoi',
   'keys.new': 'anulează selecția · joc nou',
 
   'hint.selected':
-    '<b>{cell}</b> — apasă <kbd>1</kbd>–<kbd>5</kbd> sau <kbd>K</kbd> pentru valoare · ține <kbd>Shift</kbd> dacă a licărit roșu',
+    '<b>{cell}</b> — apasă <kbd>1</kbd>–<kbd>5</kbd> sau <kbd>K</kbd> pentru valoare · ține <kbd>Shift</kbd> dacă a fost 5 lângă (a strălucit roșu)',
 
   'fx.captured': 'Capturat!',
   'fx.bingo': 'BINGO',

@@ -9,7 +9,7 @@
 // most three 5s there are at most C(25,3) = 2300 placements to enumerate.
 
 import { KING } from './rules.js';
-import { popcount, bits } from './bitboard.js';
+import { popcount, bits, NEIGHBOR_MASKS } from './bitboard.js';
 import { hiddenMask } from './game.js';
 
 function revealed5Mask(state) {
@@ -80,6 +80,23 @@ export function fiveProbabilities(state, placements = enumerate5Placements(state
   }
   for (let i = 0; i < 25; i++) p[i] /= placements.length;
   return p;
+}
+
+// P(a face-down 5 is on or adjacent to each cell), as a Float64Array(25) —
+// the "5-zone" danger behind the board's green/red safety tint. Exact over
+// the enumerated placements, like fiveProbabilities.
+export function fiveZoneRisk(state, placements = enumerate5Placements(state)) {
+  const r = new Float64Array(25);
+  if (!placements.length) return r;
+  for (let i = 0; i < 25; i++) {
+    const zone = NEIGHBOR_MASKS[i] | (1 << i);
+    let hits = 0;
+    for (const pl of placements) {
+      if (pl & zone) hits++;
+    }
+    r[i] = hits / placements.length;
+  }
+  return r;
 }
 
 // Exact P(cell = v) for hidden cells: dist[cell * 7 + v].
