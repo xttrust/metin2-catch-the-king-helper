@@ -17,7 +17,16 @@ const gauge = document.getElementById('chestGauge');
 const topMoves = document.getElementById('topMoves');
 const suggestText = document.getElementById('suggestText');
 
+let lastHandIdx = null;
+
 export function renderHand(state) {
+  const idx = state.over ? -2 : state.handIndex;
+  if (lastHandIdx !== null && idx !== lastHandIdx && !state.over) {
+    handBig.classList.remove('bump');
+    void handBig.offsetWidth;
+    handBig.classList.add('bump');
+  }
+  lastHandIdx = idx;
   handBig.textContent = state.over ? '—' : vLabel(HAND_SEQUENCE[state.handIndex]);
   handTrack.innerHTML = '';
   HAND_SEQUENCE.forEach((v, i) => {
@@ -38,7 +47,15 @@ function arcPath(cx, cy, r, a0, a1) {
   return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
+let lastScore = null;
+
 export function renderScore(state) {
+  if (lastScore !== null && state.score > lastScore) {
+    scoreVal.classList.remove('pop');
+    void scoreVal.offsetWidth;
+    scoreVal.classList.add('pop');
+  }
+  lastScore = state.score;
   scoreVal.textContent = state.score;
   scoreVal.classList.toggle('gold', state.score >= GOLD_THRESHOLD);
   scoreTarget.textContent = `/ ${GOLD_THRESHOLD}`;
@@ -65,10 +82,12 @@ export function renderScore(state) {
 }
 
 export function renderGoldChance(p, exact = false) {
+  const locked = p !== null && p !== undefined && p >= 0.9995;
+  goldChance.closest('.goldchance')?.classList.toggle('locked', locked);
   if (p === null || p === undefined) {
     goldChance.textContent = '—';
   } else {
-    goldChance.textContent = `${(100 * p).toFixed(exact ? 1 : 0)}%${exact ? '' : ''}`;
+    goldChance.textContent = locked ? '100%' : `${(100 * p).toFixed(exact ? 1 : 0)}%`;
   }
 }
 
@@ -127,6 +146,7 @@ export function renderTopMoves(list, onPick) {
 export function renderKeys() {
   const el = document.getElementById('keysHelp');
   el.innerHTML = `
+    <li>${t('keys.select')}</li>
     <li><kbd>1</kbd>–<kbd>5</kbd> <kbd>K</kbd> ${t('keys.hover')}</li>
     <li><kbd>Shift</kbd>+${t('keys.shift')}</li>
     <li>${t('keys.click')}</li>

@@ -94,7 +94,7 @@ async function analyze(msg) {
   }
 
   // Fast phase: heuristic ranking, forced moves resolved instantly.
-  const opener = forcedOpener(state);
+  const opener = forcedOpener(state, ctx, DEFAULT_WEIGHTS);
   const free = opener ? null : freeChainCatch(state, ctx);
   const ranked = rankMoves(state, DEFAULT_WEIGHTS, ctx);
   let fastMove;

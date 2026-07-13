@@ -22,6 +22,7 @@ export const en = {
   'action.undo': 'Undo',
   'action.redo': 'Redo',
   'action.heatmap': '5-heatmap',
+  'action.sound': 'Sound',
   'action.newGame': 'New game',
   'action.cancel': 'Cancel',
 
@@ -33,9 +34,20 @@ export const en = {
 
   'keys.hover': 'hover a card + value = reveal',
   'keys.shift': 'with flash',
-  'keys.click': 'click face-up card = catch',
+  'keys.select': 'click face-down card = select it',
+  'keys.click': 'click face-up card = instant catch',
   'keys.undo': 'undo',
-  'keys.new': 'new game',
+  'keys.new': 'clear selection · new game',
+
+  'hint.selected':
+    '<b>{cell}</b> — press <kbd>1</kbd>–<kbd>5</kbd> or <kbd>K</kbd> for its value · hold <kbd>Shift</kbd> if it flashed red',
+
+  'fx.captured': 'Captured!',
+  'fx.bingo': 'BINGO',
+  'fx.goldLocked': 'GOLD GUARANTEED!',
+  'fx.goldLockedSub': '100% gold chance — bring it home.',
+  'fx.goldWin': 'GOLDEN KING’S LOOT!',
+  'fx.goldWinSub': '{score} points — the gold chest is yours.',
 
   'chest.gold': 'Golden King’s Loot',
   'chest.silver': 'Silver chest',

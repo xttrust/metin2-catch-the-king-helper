@@ -17,6 +17,7 @@ import {
   DEFAULT_WEIGHTS,
   OPENER_CELLS,
   buildContext,
+  fivesFullyInformed,
   heuristicPolicy,
   rankMoves,
   safeForFive,
@@ -47,8 +48,11 @@ export function freeChainCatch(state, ctx) {
   return null;
 }
 
-export function forcedOpener(state) {
+// Fixed opener move, unless (with openerExit set and a context supplied) the
+// 5-placement is already fully flash-informed and the opener has no job left.
+export function forcedOpener(state, ctx = null, weights = null) {
   if (state.handIndex < OPENER_CELLS.length + 1) {
+    if (weights?.openerExit && ctx && fivesFullyInformed(state, ctx)) return null;
     for (const cell of OPENER_CELLS) {
       if (!(state.revealed & (1 << cell))) {
         return { kind: 'reveal', cell };
@@ -68,10 +72,9 @@ export function makeRolloutPolicy(options = {}) {
   const useOpener = options.opener !== false;
 
   return function rolloutPolicy(state, rng) {
-    const opener = useOpener ? forcedOpener(state) : null;
-    if (opener) return opener;
-
     const ctx = buildContext(state);
+    const opener = useOpener ? forcedOpener(state, ctx, weights) : null;
+    if (opener) return opener;
     const free = freeChainCatch(state, ctx);
     if (free) return free;
 

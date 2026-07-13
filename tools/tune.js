@@ -28,13 +28,15 @@ const TUNABLE = {
   fodderLow: 0.15,
   fodderTie: 0.2,
   fodderKing: 0.1,
-  bingoStep: 8,
+  bingoProgress: 1,
   bingoComplete: 6,
   info: 12,
   fiveReserve: 12,
   catchBonus: 3,
   tieCatch: 8,
-  kHunt: 15,
+  kHuntSlope: 0.04,
+  kHuntMax: 15,
+  reserve5Ev: 0.15,
 };
 
 function evalWeights(weights, n, seedBase) {

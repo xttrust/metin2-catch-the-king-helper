@@ -22,6 +22,7 @@ export const ro = {
   'action.undo': 'Înapoi',
   'action.redo': 'Repetă',
   'action.heatmap': 'Heatmap 5',
+  'action.sound': 'Sunet',
   'action.newGame': 'Joc nou',
   'action.cancel': 'Anulează',
 
@@ -33,9 +34,20 @@ export const ro = {
 
   'keys.hover': 'cursor pe carte + cifră = întoarce',
   'keys.shift': 'cu licărire',
-  'keys.click': 'click pe carte întoarsă = prinde',
+  'keys.select': 'click pe carte ascunsă = o selectezi',
+  'keys.click': 'click pe carte întoarsă = prindere instant',
   'keys.undo': 'înapoi',
-  'keys.new': 'joc nou',
+  'keys.new': 'anulează selecția · joc nou',
+
+  'hint.selected':
+    '<b>{cell}</b> — apasă <kbd>1</kbd>–<kbd>5</kbd> sau <kbd>K</kbd> pentru valoare · ține <kbd>Shift</kbd> dacă a licărit roșu',
+
+  'fx.captured': 'Capturat!',
+  'fx.bingo': 'BINGO',
+  'fx.goldLocked': 'AUR GARANTAT!',
+  'fx.goldLockedSub': 'Șansă la aur 100% — du-l acasă.',
+  'fx.goldWin': 'PRADA DE AUR A REGELUI!',
+  'fx.goldWinSub': '{score} puncte — cufărul de aur e al tău.',
 
   'chest.gold': 'Prada de Aur a Regelui',
   'chest.silver': 'Cufăr de argint',

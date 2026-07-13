@@ -30,28 +30,36 @@ import { enumerate5Placements, fiveProbabilities } from '../engine/belief.js';
 // localize every possible 5 on the board.
 export const OPENER_CELLS = [6, 8, 16, 18];
 
-// Tuned via tools/tune.js random search on seeded self-play (see README for
-// methodology); do not hand-edit without re-benchmarking.
+// Tuned via tools/tune.js random search plus paired A/B against the
+// mechanisms of the jogoe reference solver (see README for methodology);
+// do not hand-edit without re-benchmarking.
 export const DEFAULT_WEIGHTS = {
   chain: 3.194, // scale on the turn-continuation value
   fodderLow: 0.373, // deferred value of a lost reveal that later hands chain
   fodderTie: 0.008, // ... when only an equal hand card remains to tie it
   fodderKing: 0.673, // a revealed King is a near-guaranteed 100 for the K-hand
   fodderDead: 0.05, // nothing left that could ever catch it
-  bingoStep: 0, // squared line-progress shaping
   bingoComplete: 1.941, // completing a line right now
+  bingoProgress: 0, // partial-line credit: sum of (othersDone/4)^2, dead-line filtered
   info: 3.936, // bits of information about the 5-placement
   fiveReserve: 58.143, // keep safe flip targets for the 5-turn
   catchBonus: 4.47, // catches are certain; tiny nudge over equal-EV flips
   tieCatch: -20.568, // bias against banking the turn via a tie-catch
-  kHunt: 25, // extra pull toward likely-King cells, scaled by gap to gold
+  tieDominated: 0, // 1 = score dominated tie-catches at 0 (a later hand chains them free)
+  // K-hunt bonus per unit P(King): min(kHuntMax, kHuntBase + kHuntSlope * gap-to-gold).
+  // (base 0 / slope 25/350 / max 25 reproduces the legacy kHunt=25 shape.)
+  kHuntBase: 0,
+  kHuntSlope: 25 / 350,
+  kHuntMax: 25,
+  reserve5Ev: 0, // 1 = price safe/deduced-5 reveals at (ev now − ev on the 5-turn)
+  openerExit: 0, // 1 = abandon the opener once every possible 5 is flash-informed
 };
 
-// How much the King's 100 still matters: 1 when far from gold, 0 once safe.
-function needGold(state) {
-  const gap = GOLD_THRESHOLD - state.score;
-  if (gap <= 0) return 0;
-  return Math.min(1, gap / 350);
+// K-hunt weight: locating the K converts the K-turn into a guaranteed +100,
+// worth more the further we are from gold.
+function kHuntWeight(state, weights) {
+  const gap = Math.max(0, GOLD_THRESHOLD - state.score);
+  return Math.min(weights.kHuntMax, weights.kHuntBase + weights.kHuntSlope * gap);
 }
 
 // --- shared per-decision context -------------------------------------------
@@ -167,21 +175,48 @@ function turnContinuation(state, ctx, hand, weights) {
   return { cont, pChainAvg: c };
 }
 
-// Squared-progress shaping for the lines through `cell` if it gets scored.
-function bingoTerms(state, cell) {
-  let step = 0;
+// Is a revealed-unscored cell permanently unscoreable? Its bingo lines can
+// then never complete, so progress credit toward them is phantom.
+// (Learned from the reference solver's dead-line filter.)
+function cellPermanentlyDead(state, cell) {
+  const v = state.values[cell];
+  if (v === KING) return false; // the K-hand comes last; alive until game end
+  const h = state.handIndex;
+  if (HAND_SEQUENCE.lastIndexOf(v) >= h) return false; // a same-value tie remains
+  if (v === 5) return true; // only the 5-tie can ever score a 5
+  if (v < 4 && h <= 9) return false; // hands 2-4 still chain-catch it freely
+  if (h > 10) return true; // past the 5-hand: nothing left that beats it
+  // Only the hand-5 chain remains; an adjacent revealed 5 makes it
+  // permanently capture-unsafe.
+  return state.flags.captureOnRevealed5Neighbor && hasRevealed5Neighbor(state, cell);
+}
+
+// Bitmask of revealed-unscored cells that can never score.
+function deadCellMask(state) {
+  let mask = 0;
+  for (const cell of bits(catchableMask(state))) {
+    if (cellPermanentlyDead(state, cell)) mask |= 1 << cell;
+  }
+  return mask;
+}
+
+// Bingo shaping for the lines through `cell` if it gets scored: how many
+// lines complete right now, plus partial credit sum((othersDone/4)^2) over
+// the incomplete live lines (squared so near-complete lines dominate).
+function bingoTerms(state, cell, deadMask) {
+  let progress = 0;
   let complete = 0;
   let lines = CELL_LINES[cell] & ~state.bingos;
   while (lines) {
     const lbit = lines & -lines;
     lines ^= lbit;
     const li = 31 - Math.clz32(lbit);
-    const before = popcount(LINE_MASKS[li] & state.scored);
-    const after = before + 1;
-    step += (after * after - before * before) / 25;
-    if (after === 5) complete += 1;
+    if (LINE_MASKS[li] & deadMask) continue; // phantom line: can never complete
+    const done = popcount(LINE_MASKS[li] & state.scored);
+    if (done >= 4) complete += 1;
+    else progress += (done / 4) * (done / 4);
   }
-  return { step, complete };
+  return { progress, complete };
 }
 
 // --- candidate scoring -------------------------------------------------------
@@ -193,6 +228,8 @@ export function rankMoves(state, weights = DEFAULT_WEIGHTS, ctx = buildContext(s
   const out = [];
   const fiveTurnPending = state.handIndex <= 10 && state.remaining[5] > 0;
   const { cont } = turnContinuation(state, ctx, hand, weights);
+  const deadMask = weights.bingoProgress ? deadCellMask(state) : 0;
+  const kHuntW = kHuntWeight(state, weights);
 
   // Count certainly-safe five targets to know how scarce they are.
   let safeFiveCells = 0;
@@ -248,17 +285,41 @@ export function rankMoves(state, weights = DEFAULT_WEIGHTS, ctx = buildContext(s
     }
     terms.ev = ev;
     terms.chain = weights.chain * pChain * cont;
-    const bt = bingoTerms(state, cell);
+    const bt = bingoTerms(state, cell, deadMask);
     const pScored = pChain + pScore;
-    terms.bingo = pScored * (bt.step * weights.bingoStep + bt.complete * weights.bingoComplete);
+    // Progress credit stays unconditional: even a lost reveal advances its
+    // lines once a later hand collects the card as fodder.
+    terms.bingo =
+      pScored * bt.complete * weights.bingoComplete + bt.progress * weights.bingoProgress;
     terms.info = fiveTurnPending && hand !== 5 ? infoGain(state, ctx, cell) * weights.info : 0;
     // Dynamic King hunt: locating the K locks a guaranteed 100 for the
     // K-turn; worth more the further we are from gold (on top of the static
     // fodderKing share already in the EV).
     terms.king =
-      hand !== KING && state.remaining[KING] > 0
-        ? ctx.pVal(cell, KING) * weights.kHunt * needGold(state)
-        : 0;
+      hand !== KING && state.remaining[KING] > 0 ? ctx.pVal(cell, KING) * kHuntW : 0;
+    // Safe-for-5 reveals (and deduced 5s) are the 5-turn's food: flipping
+    // them now only earns the difference vs letting the 5-turn collect them.
+    // Chain and bingo value roughly cancel (both turns get them); info and
+    // the K-hunt stay on the "now" side.
+    if (
+      weights.reserve5Ev &&
+      hand !== 5 &&
+      fiveTurnPending &&
+      state.handIndex < 10 &&
+      (ctx.p5[cell] >= 0.999 || safeForFive(state, ctx, cell))
+    ) {
+      let evLater = 0;
+      for (let v = 1; v <= 5; v++) evLater += ctx.pVal(cell, v) * POINTS[v];
+      terms.reserve = -weights.reserve5Ev * evLater;
+      terms.chain = 0;
+      out.push({
+        kind: 'reveal',
+        cell,
+        score: terms.ev + terms.reserve + terms.bingo + terms.info + terms.king,
+        terms,
+      });
+      continue;
+    }
     // Burning one of the few safe 5-flip targets before the 5-turn.
     let reserve = 0;
     if (fiveTurnPending && state.handIndex < 10 && safeFiveCells > 0 && safeFiveCells <= 4) {
@@ -280,13 +341,24 @@ export function rankMoves(state, weights = DEFAULT_WEIGHTS, ctx = buildContext(s
     if (hand === 5 && state.flags.captureAppliesToCatch && !safeForFive(state, ctx, cell)) {
       continue;
     }
+    // A tie-catch is dominated when a later hand chain-catches the same cell
+    // for free (without ending this turn): hands 2/3 always leave a higher
+    // hand; hand 4 does iff the cell stays provably 5-safe.
+    if (weights.tieDominated && cmp === 'score' && hand !== KING) {
+      const laterChain =
+        hand === 2 || hand === 3 || (hand === 4 && safeForFive(state, ctx, cell));
+      if (laterChain) {
+        out.push({ kind: 'catch', cell, score: 0, terms: { ev: POINTS[v], dominated: true } });
+        continue;
+      }
+    }
     const terms = {};
     terms.ev = POINTS[v];
     // A chain-catch is a free action: certain points and the turn continues
     // with every option intact. A tie-catch banks the turn.
     terms.chain = cmp === 'chain' ? weights.chain * cont : weights.tieCatch;
-    const bt = bingoTerms(state, cell);
-    terms.bingo = bt.step * weights.bingoStep + bt.complete * weights.bingoComplete;
+    const bt = bingoTerms(state, cell, deadMask);
+    terms.bingo = bt.complete * weights.bingoComplete + bt.progress * weights.bingoProgress;
     terms.info = 0;
     terms.reserve = 0;
     const score =
@@ -316,6 +388,19 @@ export function knownKingCell(state, ctx) {
   return -1;
 }
 
+// Has every hidden cell that could still be a 5 already been "seen" by some
+// revealed neighbor's flash observation? If so the opener has nothing left
+// to learn about the 5-map and can hand over to the EV heuristic early.
+export function fivesFullyInformed(state, ctx) {
+  if (state.remaining[5] === 0) return true;
+  for (const c of bits(ctx.hidden)) {
+    const p = ctx.p5[c];
+    if (p <= 0.001 || p >= 0.999) continue;
+    if (!(NEIGHBOR_MASKS[c] & state.revealed)) return false;
+  }
+  return true;
+}
+
 // --- the policy --------------------------------------------------------------
 
 // Deterministic baseline policy: opener first, then best heuristic move.
@@ -323,11 +408,17 @@ export function heuristicPolicy(state, weights = DEFAULT_WEIGHTS) {
   // Fixed opener on the 1-hands: the four inner corners, skipping any that
   // are already revealed.
   if (state.handIndex < OPENER_CELLS.length + 1) {
-    for (const cell of OPENER_CELLS) {
-      if (!(state.revealed & (1 << cell))) {
-        return { kind: 'reveal', cell };
+    const ctx = buildContext(state);
+    if (!(weights.openerExit && fivesFullyInformed(state, ctx))) {
+      for (const cell of OPENER_CELLS) {
+        if (!(state.revealed & (1 << cell))) {
+          return { kind: 'reveal', cell };
+        }
       }
     }
+    const ranked = rankMoves(state, weights, ctx);
+    if (!ranked.length) return null;
+    return { kind: ranked[0].kind, cell: ranked[0].cell };
   }
   const ranked = rankMoves(state, weights);
   if (!ranked.length) return null;

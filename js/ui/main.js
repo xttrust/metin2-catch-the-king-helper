@@ -14,12 +14,24 @@ import {
   hasRevealed5Neighbor,
   hiddenMask,
 } from '../engine/game.js';
-import { HAND_SEQUENCE, KING, chestFor, compare } from '../engine/rules.js';
+import { HAND_SEQUENCE, KING, GOLD_THRESHOLD, chestFor, compare } from '../engine/rules.js';
 import { NEIGHBOR_MASKS, cellName } from '../engine/bitboard.js';
 import { dealBoard } from '../engine/belief.js';
 import { mulberry32 } from '../engine/rng.js';
 import { initI18n, setLang, getLang, t, applyDom, onLangChange } from '../i18n/i18n.js';
-import { buildBoard, renderBoard, shakeCell } from './board.js';
+import { buildBoard, renderBoard, shakeCell, setSelectedCell } from './board.js';
+import {
+  initFx,
+  soundOn,
+  setSound,
+  playScore,
+  playCaptured,
+  playChime,
+  playFanfare,
+  confettiBurst,
+  showBanner,
+  floatText,
+} from './fx.js';
 import {
   renderHand,
   renderScore,
@@ -42,11 +54,22 @@ let truth = null; // practice-mode hidden board
 let decisions = [];
 let recorded = false;
 let hoverCell = -1;
+let selectedCell = -1; // face-down cell armed for keyboard input
 let heatOn = true;
 let coachOn = true;
 let lastSuggestion = null;
 let lastAnalysis = null;
 let busy = false;
+let goldLockedShown = false; // "100% gold" celebrated this round
+let lastPointerType = 'mouse'; // touch users get the sheet, mouse users don't
+
+window.addEventListener(
+  'pointerdown',
+  (e) => {
+    lastPointerType = e.pointerType || 'mouse';
+  },
+  true
+);
 
 // ---------------- worker ----------------
 const worker = new Worker(new URL('../solver/worker.js', import.meta.url), { type: 'module' });
@@ -66,6 +89,8 @@ worker.onmessage = (e) => {
     }
     if (msg.pGold !== null && msg.pGold !== undefined) {
       renderGoldChance(msg.pGold, !!msg.exact);
+      // The endgame search proved gold is guaranteed — celebrate once.
+      if (msg.exact && msg.pGold >= 0.9995 && !state.over) celebrateGoldLocked();
     }
     paintBoard();
   } else if (msg.type === 'invalid') {
@@ -122,6 +147,54 @@ function renderModeBanner() {
   }
 }
 
+// ---------------- selection + move feedback ----------------
+// Arm a face-down cell for keyboard input (-1 clears) and show the hint line.
+function selectCell(cell) {
+  selectedCell = cell;
+  setSelectedCell(cell);
+  const hint = document.getElementById('tapHint');
+  if (cell < 0) {
+    hint.hidden = true;
+  } else {
+    hint.innerHTML = t('hint.selected', { cell: cellName(cell) });
+    hint.hidden = false;
+  }
+}
+
+// Floating text + sound for an applied move event.
+function moveFx(ev) {
+  if (!ev) return;
+  if (ev.outcome === 'captured') {
+    floatText(ev.cell, t('fx.captured'), 'bad');
+    playCaptured();
+  } else if (ev.points > 0) {
+    floatText(ev.cell, `+${ev.points}`, ev.value === KING ? 'king' : '');
+    playScore(ev.points);
+    if (ev.bingoBonus > 0) {
+      const c = ev.cell;
+      const bonus = ev.bingoBonus;
+      setTimeout(() => floatText(c, `${t('fx.bingo')} +${bonus}`, 'bingo'), 320);
+    }
+  } else if (ev.kind === 'reveal' && ev.value === KING) {
+    floatText(ev.cell, '👑', 'king');
+  }
+}
+
+function celebrateGoldLocked() {
+  if (goldLockedShown) return;
+  goldLockedShown = true;
+  playChime();
+  confettiBurst(false);
+  showBanner(t('fx.goldLocked'), t('fx.goldLockedSub'));
+}
+
+function celebrateGoldWin() {
+  goldLockedShown = true;
+  playFanfare();
+  confettiBurst(true);
+  showBanner(t('fx.goldWin'), t('fx.goldWinSub', { score: state.score }), true);
+}
+
 // ---------------- game flow ----------------
 function newRound() {
   state = newGame();
@@ -129,6 +202,8 @@ function newRound() {
   recorded = false;
   lastSuggestion = null;
   lastAnalysis = null;
+  goldLockedShown = false;
+  selectCell(-1);
   truth = mode === 'practice' ? dealBoard(mulberry32((Date.now() ^ (Math.random() * 1e9)) >>> 0)) : null;
   document.getElementById('coachText').textContent = '';
   renderAll();
@@ -147,6 +222,10 @@ function afterMove() {
     };
     recordGame(rec);
     saveLastGame({ ...rec, decisions });
+    if (rec.chest === 'gold') celebrateGoldWin();
+  } else if (!state.over && state.score >= GOLD_THRESHOLD) {
+    // Score already crossed the gold line with turns to spare.
+    celebrateGoldLocked();
   }
   renderAll();
   requestAnalysis();
@@ -189,61 +268,85 @@ async function tapCell(cell) {
     }
     coachFeedback(move);
     logDecision(move);
+    let ev;
     try {
-      simMove(state, truth, move);
+      ev = simMove(state, truth, move);
     } catch {
       decisions.pop();
       shakeCell(cell);
       return;
     }
+    moveFx(ev);
     afterMove();
     return;
   }
 
-  // helper mode
-  busy = true;
-  try {
-    if (!revealed) {
-      const ans = await askReveal(state, cell);
-      if (!ans) return;
-      logDecision({ kind: 'reveal', cell });
+  // helper mode — reveal: no popup on desktop, just arm the cell for the
+  // value keys; touch users (no keyboard) still get the sheet.
+  if (!revealed) {
+    if (lastPointerType === 'touch') {
+      busy = true;
       try {
-        reveal(state, cell, ans.value, ans.flashed);
-      } catch {
-        decisions.pop();
-        shakeCell(cell);
-        return;
-      }
-      afterMove();
-    } else {
-      if (state.scored & bit) return;
-      if (compare(hand, state.values[cell]) === 'lose') {
-        shakeCell(cell);
-        return;
-      }
-      let ambiguous = false;
-      if (hand === 5 && state.flags.captureAppliesToCatch) {
-        if (state.flags.captureOnRevealed5Neighbor && hasRevealed5Neighbor(state, cell)) {
-          ambiguous = false; // certain capture; engine resolves it
-        } else if (NEIGHBOR_MASKS[cell] & hiddenMask(state) & ~state.notFive) {
-          ambiguous = true;
+        const ans = await askReveal(state, cell);
+        if (!ans) return;
+        logDecision({ kind: 'reveal', cell });
+        let ev;
+        try {
+          ev = reveal(state, cell, ans.value, ans.flashed);
+        } catch {
+          decisions.pop();
+          shakeCell(cell);
+          return;
         }
+        selectCell(-1);
+        moveFx(ev);
+        afterMove();
+      } finally {
+        busy = false;
       }
-      const ans = await askCatch(state, cell, ambiguous);
-      if (!ans) return;
-      logDecision({ kind: 'catch', cell });
-      try {
-        catchAt(state, cell, { captured: ans.captured });
-      } catch {
-        decisions.pop();
-        shakeCell(cell);
-        return;
-      }
-      afterMove();
+    } else {
+      selectCell(selectedCell === cell ? -1 : cell);
     }
-  } finally {
-    busy = false;
+    return;
   }
+
+  // helper mode — catch: instant, no confirmation. The sheet only appears
+  // when the hand-5 outcome genuinely depends on info the app cannot know.
+  if (state.scored & bit) return;
+  if (compare(hand, state.values[cell]) === 'lose') {
+    shakeCell(cell);
+    return;
+  }
+  let ambiguous = false;
+  if (hand === 5 && state.flags.captureAppliesToCatch) {
+    if (state.flags.captureOnRevealed5Neighbor && hasRevealed5Neighbor(state, cell)) {
+      ambiguous = false; // certain capture; engine resolves it
+    } else if (NEIGHBOR_MASKS[cell] & hiddenMask(state) & ~state.notFive) {
+      ambiguous = true;
+    }
+  }
+  let captured = false;
+  if (ambiguous) {
+    busy = true;
+    try {
+      const ans = await askCatch(state, cell, true);
+      if (!ans) return;
+      captured = ans.captured;
+    } finally {
+      busy = false;
+    }
+  }
+  logDecision({ kind: 'catch', cell });
+  let ev;
+  try {
+    ev = catchAt(state, cell, { captured });
+  } catch {
+    decisions.pop();
+    shakeCell(cell);
+    return;
+  }
+  moveFx(ev);
+  afterMove();
 }
 
 function tryMoveFromSuggestion(m) {
@@ -273,28 +376,42 @@ function onKey(e) {
     return;
   }
   if (e.key === 'Escape') {
+    if (selectedCell >= 0) {
+      selectCell(-1);
+      return;
+    }
     newRound();
     return;
   }
-  if (mode !== 'helper' || state.over || hoverCell < 0) return;
-  const bit = 1 << hoverCell;
+  if (mode !== 'helper' || state.over) return;
+  // An explicitly selected (clicked) cell wins over the hovered one.
+  const target = selectedCell >= 0 ? selectedCell : hoverCell;
+  if (target < 0) return;
+  const bit = 1 << target;
   if (state.revealed & bit) return;
+  // Use e.code, not e.key: with Shift held (= "flashed") the key value
+  // becomes '!'..'%' on most layouts while the code stays Digit1..Digit5.
   let value = 0;
-  if (e.key >= '1' && e.key <= '5') value = +e.key;
+  const digit = /^(?:Digit|Numpad)([1-6])$/.exec(e.code || '')?.[1];
+  if (digit) value = digit === '6' ? KING : +digit;
+  else if (e.key >= '1' && e.key <= '5') value = +e.key;
   else if (e.key === '6' || e.key.toLowerCase() === 'k') value = KING;
   if (!value) return;
   if (state.remaining[value] <= 0) {
-    shakeCell(hoverCell);
+    shakeCell(target);
     return;
   }
-  logDecision({ kind: 'reveal', cell: hoverCell });
+  logDecision({ kind: 'reveal', cell: target });
+  let ev;
   try {
-    reveal(state, hoverCell, value, e.shiftKey);
+    ev = reveal(state, target, value, e.shiftKey);
   } catch {
     decisions.pop();
-    shakeCell(hoverCell);
+    shakeCell(target);
     return;
   }
+  selectCell(-1);
+  moveFx(ev);
   afterMove();
 }
 
@@ -380,6 +497,13 @@ function boot() {
     e.currentTarget.classList.toggle('toggled', heatOn);
     paintBoard();
   });
+  const btnSound = document.getElementById('btnSound');
+  btnSound.classList.toggle('toggled', soundOn());
+  btnSound.addEventListener('click', () => {
+    setSound(!soundOn());
+    btnSound.classList.toggle('toggled', soundOn());
+  });
+  initFx();
   window.addEventListener('keydown', onKey);
   initReview(worker, () => reqId);
   renderModeBanner();

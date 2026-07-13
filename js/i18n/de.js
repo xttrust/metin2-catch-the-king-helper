@@ -22,6 +22,7 @@ export const de = {
   'action.undo': 'Rückgängig',
   'action.redo': 'Wiederholen',
   'action.heatmap': '5er-Heatmap',
+  'action.sound': 'Ton',
   'action.newGame': 'Neues Spiel',
   'action.cancel': 'Abbrechen',
 
@@ -33,9 +34,20 @@ export const de = {
 
   'keys.hover': 'Karte + Zahl = aufdecken',
   'keys.shift': 'mit Blinken',
-  'keys.click': 'Klick auf offene Karte = fangen',
+  'keys.select': 'Klick auf verdeckte Karte = auswählen',
+  'keys.click': 'Klick auf offene Karte = sofort fangen',
   'keys.undo': 'rückgängig',
-  'keys.new': 'neues Spiel',
+  'keys.new': 'Auswahl aufheben · neues Spiel',
+
+  'hint.selected':
+    '<b>{cell}</b> — drücke <kbd>1</kbd>–<kbd>5</kbd> oder <kbd>K</kbd> für den Wert · halte <kbd>Shift</kbd>, wenn sie rot geblinkt hat',
+
+  'fx.captured': 'Geschnappt!',
+  'fx.bingo': 'BINGO',
+  'fx.goldLocked': 'GOLD GARANTIERT!',
+  'fx.goldLockedSub': '100 % Gold-Chance — bring es nach Hause.',
+  'fx.goldWin': 'GOLDENE KÖNIGSBEUTE!',
+  'fx.goldWinSub': '{score} Punkte — die Goldtruhe gehört dir.',
 
   'chest.gold': 'Goldene Königsbeute',
   'chest.silver': 'Silberne Truhe',

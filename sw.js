@@ -1,6 +1,6 @@
 // Cache-first service worker: the whole app works offline after first load.
 // Bump VERSION on every deploy to invalidate old caches.
-const VERSION = 'ctk-v1';
+const VERSION = 'ctk-v2';
 
 const ASSETS = [
   '.',
@@ -10,6 +10,7 @@ const ASSETS = [
   'css/style.css',
   'js/ui/main.js',
   'js/ui/board.js',
+  'js/ui/fx.js',
   'js/ui/panels.js',
   'js/ui/picker.js',
   'js/ui/review.js',
