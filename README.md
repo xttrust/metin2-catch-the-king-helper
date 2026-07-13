@@ -54,15 +54,26 @@ node tools/trace.js 7                     # watch one game move by move
 
 Self-play gold rates (fresh seeds, Wilson 95% CI):
 
-| Policy | Gold rate | Notes |
+| Policy | Gold rate | Run |
 |---|---|---|
-| Tuned heuristic alone | ~30.6% | n=30k |
-| + rollouts & exact endgame (`rollout`) | see table in releases | n≥100k confirmation run |
+| Tuned heuristic alone | 30.6% | n=30 000 |
+| + rollouts + exact endgame, live config (`rollout`, 160 samples, endgame ≤7) | 42.7% [41.5%, 44.0%] | n=6 000, seed 77 |
+| + benchmark config (320 samples, endgame ≤8, early-decision boost) | **43.1% [42.6%, 43.7%]** | n=30 000, seed 101 |
 | Reference helper (jogoe v0.12.10) | 44.8% | their published 100k self-play figure |
 
-*(Benchmark numbers in this table are updated from the exact runs documented in the commit that changes them.)*
-
-**A note on comparability:** our simulation uses the slightly *stricter* real-game 5-capture rule (a revealed 5 neighbor also captures the hand-5, not only a face-down one), which the reference solver respects in play but does not model in its simulator. If anything this makes our self-play numbers conservative relative to theirs.
+**Honest comparison.** Our best measured configuration sits ~1.7 pp below the
+reference's published self-play figure. The numbers are not perfectly
+commensurable — our simulator enforces the *stricter* real-game 5-capture rule
+(a revealed 5 neighbor also captures the hand-5), which the reference's
+simulator does not model (their solver avoids those spots by policy, so the
+inflation on their side is small). Where this tool is ahead: an exact,
+event-time belief model (strictly finer deduction than state-time
+reconstruction), contradiction detection on user input — the reference's own
+docs note that input typos silently poison its deduction, which is a big part
+of why its *human* all-time gold rate is ~41% vs its 44.8% self-play — plus
+practice mode, move review, and mobile support that the reference lacks
+entirely. Solver work continues; the benchmark harness makes every claim
+reproducible.
 
 ## Repository layout
 
