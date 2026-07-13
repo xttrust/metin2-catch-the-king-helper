@@ -17,7 +17,7 @@ export const ro = {
   'suggest.reveal': 'Întoarce {cell}',
   'suggest.catch': 'Prinde {cell}',
   'suggest.gameOver': 'Joc terminat — {score} puncte, {chest}',
-  'suggest.invalid': 'Datele introduse se contrazic — verifică ultima licărire / valoare.',
+  'suggest.invalid': 'Datele introduse se contrazic — verifică ultima valoare sau bifa „5 e pe lângă”.',
 
   'action.undo': 'Înapoi',
   'action.redo': 'Repetă',
@@ -30,22 +30,22 @@ export const ro = {
   'picker.catch': 'Prinzi {cell} cu {hand}?',
   'picker.catchBtn': 'Prinde (+{pts})',
   'picker.captured': '5-ul meu a fost capturat',
-  'picker.flashed': '5 lângă (cartea a strălucit roșu)',
+  'picker.flashed': '5 e pe lângă (cartea a strălucit roșu)',
 
   'keys.hover': 'cursor pe carte + cifră = întoarce',
-  'keys.shift': 'cu 5 lângă (strălucire roșie)',
+  'keys.shift': 'când 5 e pe lângă',
   'keys.select': 'click pe carte ascunsă = o selectezi',
   'keys.click': 'click pe carte întoarsă = prindere instant',
   'keys.undo': 'înapoi',
   'keys.new': 'anulează selecția · joc nou',
 
   'hint.selected':
-    '<b>{cell}</b> — apasă <kbd>1</kbd>–<kbd>5</kbd> sau <kbd>K</kbd> pentru valoare · ține <kbd>Shift</kbd> dacă a fost 5 lângă (a strălucit roșu)',
+    '<b>{cell}</b> — apasă <kbd>1</kbd>–<kbd>5</kbd> sau <kbd>K</kbd> pentru valoare · ține <kbd>Shift</kbd> dacă 5 e pe lângă',
 
   'fx.captured': 'Capturat!',
   'fx.bingo': 'BINGO',
   'fx.goldLocked': 'AUR GARANTAT!',
-  'fx.goldLockedSub': 'Șansă la aur 100% — du-l acasă.',
+  'fx.goldLockedSub': 'Șansa la aur e 100% — e ca și câștigat.',
   'fx.goldWin': 'PRADA DE AUR A REGELUI!',
   'fx.goldWinSub': '{score} puncte — cufărul de aur e al tău.',
 
@@ -55,13 +55,13 @@ export const ro = {
   'chest.none': 'fără cufăr',
 
   'reason.opener': 'Deschidere: localizează rapid 5-urile',
-  'reason.chainCatch': 'Prindere gratuită — puncte, tura continuă',
+  'reason.chainCatch': 'Prindere gratuită — iei punctele și tura continuă',
   'reason.bankCatch': 'Încheie tura în siguranță',
-  'reason.info': 'Cea mai bună informație despre 5-uri',
-  'reason.chain': 'Cea mai bună șansă să ții lanțul în viață',
-  'reason.bingo': 'Avansează o linie de bingo',
+  'reason.info': 'Afli cel mai mult despre 5-uri',
+  'reason.chain': 'Cea mai bună șansă să continui lanțul',
+  'reason.bingo': 'Te apropie de un bingo',
   'reason.king': 'Probabil Regele',
-  'reason.safeFive': 'Demonstrat sigur în tura de 5',
+  'reason.safeFive': 'Dovedit sigur pentru tura de 5',
   'reason.exact': 'Calcul exact de final',
 
   'practice.chip': 'Antrenament',
@@ -69,7 +69,7 @@ export const ro = {
   'practice.coachToggle': 'Antrenor',
   'practice.coach': 'Antrenor',
   'practice.agree': 'Bine — solverul e de acord cu {cell}.',
-  'practice.differ': 'Solverul prefera {best} în loc de {chosen}.',
+  'practice.differ': 'Solverul ar fi ales {best} în loc de {chosen}.',
 
   'review.title': 'Analiza jocului',
   'review.blurb': 'Fiecare mutare este reevaluată de solver. Vezi unde ai câștigat sau pierdut șansa la aur.',
@@ -118,21 +118,21 @@ export const ro = {
 <li><b>Egal</b> → punctezi, tura se termină.</li>
 <li><b>Mâna mai mică</b> → zero puncte, tura se termină — dar cartea rămâne întoarsă și poate fi prinsă mai târziu.</li>
 </ul>
-<div class="callout"><b>Regula Regelui:</b> cartea K din mână nu face lanț — bate <i>doar</i> Regele de pe tablă (+100). Cu orice altceva pierde. Să dezvălui Regele devreme cu o carte ieftină e excelent: tura ta de K devine +100 garantat.</div>
-<h3>Regula 5-ului și licărirea</h3>
-<p>Dacă un 5 ascuns e vecin cu o carte pe care o întorci (8 vecini), cartea <b>licărește roșu</b>. În tura ta de 5, dacă întorci sau prinzi lângă un 5, 5-ul tău e <b>capturat</b>: zero puncte, tura pierdută. Marchează licăririle în asistent — cu ele solverul localizează 5-urile.</p>
+<div class="callout"><b>Regula Regelui:</b> cartea K din mână nu face lanț — bate <i>doar</i> Regele de pe tablă (+100). Cu orice altceva pierde. Să întorci Regele devreme cu o carte ieftină e excelent: tura ta de K devine un +100 garantat.</div>
+<h3>Regula 5-ului și strălucirea roșie</h3>
+<p>Dacă un 5 ascuns e lângă cartea pe care o întorci (pe oricare din cele 8 câmpuri vecine), cartea <b>strălucește roșu</b> — adică „5 e pe lângă”. În tura ta de 5, dacă întorci sau prinzi o carte lângă un 5, 5-ul tău e <b>capturat</b>: zero puncte, tura pierdută. Bifează „5 e pe lângă” în asistent — așa localizează solverul 5-urile.</p>
 <h3>Bingo</h3>
 <p>Punctează toate cele 5 celule ale unui rând, coloană sau diagonală pentru <b>+10</b> fiecare (12 linii).</p>
 <h3>Cufere</h3>
 <ul><li>\u{1F9F0} Bronz: 100–399</li><li>\u{1F948} Argint: 400–549</li><li>\u{1F3C6} <b>Aur: 550+</b></li></ul>
 <h2>Cum funcționează asistentul</h2>
-<p>Introdu ce vezi în joc: atinge o carte, alege valoarea, bifează „a licărit” dacă a strălucit. Solverul calculează probabilitățile exacte ale fiecărei cărți ascunse, sugerează cea mai puternică mutare și arată live șansa la aur. Motorul combină o carte de deschideri, economia lanțurilor, simulări Monte-Carlo și calcul exact de final.</p>
+<p>Introdu ce vezi în joc: apasă pe o carte, alege valoarea și bifează „5 e pe lângă” dacă a strălucit roșu. Solverul calculează probabilitățile exacte ale fiecărei cărți ascunse, sugerează cea mai bună mutare și arată live șansa la aur. Motorul combină o carte de deschideri, economia lanțurilor, simulări Monte-Carlo și calcul exact de final.</p>
 <h3>Strategia în trei rânduri</h3>
 <ul>
 <li><b>Întoarcerile sunt totul.</b> Aproape orice carte întoarsă ajunge punctată — de tine acum, sau mai târziu printr-o prindere. Prelungește turele, întoarce mult.</li>
-<li><b>Respectă 5-urile.</b> Localizează-le devreme (deschiderea o face), păstrează celule sigure pentru tura de 5 și nu întoarce cu 5-ul lângă un posibil 5.</li>
-<li><b>Găsește Regele devreme.</b> O tură ieftină sacrificată blochează +100.</li>
+<li><b>Ai grijă la 5-uri.</b> Găsește-le devreme (deschiderea face asta), păstrează-ți cărți sigure pentru tura de 5 și nu întoarce cu 5-ul din mână lângă un posibil 5.</li>
+<li><b>Găsește Regele devreme.</b> O tură ieftină sacrificată îți garantează +100.</li>
 </ul>
-<p class="muted">Modul Antrenament îți împarte table simulate nelimitate — exersează înainte să consumi King Decks reale.</p>
+<p class="muted">Modul Antrenament îți oferă table simulate la nesfârșit — exersează înainte să consumi King Decks reale.</p>
 `,
 };
