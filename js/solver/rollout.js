@@ -65,9 +65,10 @@ export function makeRolloutPolicy(options = {}) {
   const goal = options.goal ?? GOLD_THRESHOLD;
   const endgameHidden = options.endgameHidden ?? 7;
   const endgameBudget = options.endgameBudget ?? 400000;
+  const useOpener = options.opener !== false;
 
   return function rolloutPolicy(state, rng) {
-    const opener = forcedOpener(state);
+    const opener = useOpener ? forcedOpener(state) : null;
     if (opener) return opener;
 
     const ctx = buildContext(state);
@@ -108,13 +109,15 @@ export function makeRolloutPolicy(options = {}) {
 
     // Two-stage selection against the winner's curse: a cheap screening pass
     // over all candidates, then a decisive pass with fresh samples over the
-    // finalists only.
+    // finalists only. Early decisions are few and shape the whole game, so
+    // they get a larger sample budget.
+    const eff = state.handIndex <= 5 ? Math.ceil(samples * 1.5) : samples;
     const screening = ranked.slice(0, topK);
-    const s1 = Math.max(24, samples >> 1);
+    const s1 = Math.max(24, eff >> 1);
     const pass1 = argsort(screening, evaluate(screening, s1));
     const finalists = pass1.slice(0, 3).map((x) => x.c);
     if (finalists.length === 1) return { kind: finalists[0].kind, cell: finalists[0].cell };
-    const pass2 = argsort(finalists, evaluate(finalists, samples));
+    const pass2 = argsort(finalists, evaluate(finalists, eff));
     return { kind: pass2[0].c.kind, cell: pass2[0].c.cell };
   };
 }

@@ -34,6 +34,7 @@ const TUNABLE = {
   fiveReserve: 12,
   catchBonus: 3,
   tieCatch: 8,
+  kHunt: 15,
 };
 
 function evalWeights(weights, n, seedBase) {

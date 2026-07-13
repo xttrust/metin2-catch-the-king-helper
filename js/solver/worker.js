@@ -170,6 +170,23 @@ async function analyze(msg) {
     reasons: reasonsFor(c, state, ctx),
   }));
   scored.sort((a, b) => b.pGold - a.pGold || b.meanScore - a.meanScore);
+  // Decisive second pass on the top two with fresh samples (winner's-curse
+  // guard, mirroring the benchmark solver's two-stage selection).
+  if (scored.length > 1 && !(opener || free)) {
+    const finalists = scored.slice(0, 2).map((s) => ({ kind: s.kind, cell: s.cell }));
+    const r2 = await evaluateCandidates(state, finalists, ctx, gen, samples);
+    if (!r2 || gen !== liveGen) return;
+    for (let i = 0; i < finalists.length; i++) {
+      scored[i].pGold = (scored[i].pGold + r2[i].gold / r2[i].n) / 2;
+      scored[i].meanScore = (scored[i].meanScore + r2[i].score / r2[i].n) / 2;
+    }
+    if (
+      scored[1].pGold > scored[0].pGold ||
+      (scored[1].pGold === scored[0].pGold && scored[1].meanScore > scored[0].meanScore)
+    ) {
+      [scored[0], scored[1]] = [scored[1], scored[0]];
+    }
+  }
   postMessage({
     type: 'analysis', phase: 'full', gen, reqId: msg.reqId,
     p5, dist,

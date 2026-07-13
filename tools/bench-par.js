@@ -17,9 +17,9 @@ import { mulberry32, streamSeed } from '../js/engine/rng.js';
 import { GOLD_THRESHOLD, SILVER_THRESHOLD, BRONZE_THRESHOLD } from '../js/engine/rules.js';
 import { makeSolver } from '../js/solver/solver.js';
 
-function play(policy, truth, seed) {
+function play(policy, truth, seed, flags) {
   const rng = mulberry32(seed);
-  const g = newGame({ trackHistory: false });
+  const g = newGame({ trackHistory: false, flags });
   let guard = 0;
   while (!g.over && guard++ < 300) {
     const move = policy(g, rng);
@@ -30,15 +30,15 @@ function play(policy, truth, seed) {
 }
 
 if (!isMainThread) {
-  const { start, end, seed, a, b, optionsA, optionsB } = workerData;
+  const { start, end, seed, a, b, optionsA, optionsB, flags } = workerData;
   const polA = makeSolver(a, optionsA || {});
   const polB = b ? makeSolver(b, optionsB || {}) : null;
   const out = new Float64Array((end - start) * (polB ? 2 : 1));
   let k = 0;
   for (let i = start; i < end; i++) {
     const truth = dealBoard(mulberry32(streamSeed(seed, i)));
-    out[k++] = play(polA, truth, streamSeed(seed + 500000, i));
-    if (polB) out[k++] = play(polB, truth, streamSeed(seed + 900000, i));
+    out[k++] = play(polA, truth, streamSeed(seed + 500000, i), flags);
+    if (polB) out[k++] = play(polB, truth, streamSeed(seed + 900000, i), flags);
     if ((i - start) % 200 === 199) parentPort.postMessage({ progress: 200 });
   }
   parentPort.postMessage({ done: out }, [out.buffer]);
@@ -54,6 +54,7 @@ if (!isMainThread) {
   const SEED = +optS('seed', 1);
   const optionsA = JSON.parse(optS('optsA', '{}'));
   const optionsB = JSON.parse(optS('optsB', '{}'));
+  const flags = JSON.parse(optS('flags', 'null')) ?? undefined;
   const W = Math.min(+optS('workers', Math.max(1, os.cpus().length - 2)), 16);
 
   const per = Math.ceil(N / W);
@@ -128,7 +129,7 @@ if (!isMainThread) {
       continue;
     }
     const worker = new Worker(fileURLToPath(import.meta.url), {
-      workerData: { start, end, seed: SEED, a: A, b: B, optionsA, optionsB },
+      workerData: { start, end, seed: SEED, a: A, b: B, optionsA, optionsB, flags },
     });
     worker.on('message', (msg) => {
       if (msg.progress) {

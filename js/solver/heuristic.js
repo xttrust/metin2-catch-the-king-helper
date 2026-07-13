@@ -44,7 +44,15 @@ export const DEFAULT_WEIGHTS = {
   fiveReserve: 58.143, // keep safe flip targets for the 5-turn
   catchBonus: 4.47, // catches are certain; tiny nudge over equal-EV flips
   tieCatch: -20.568, // bias against banking the turn via a tie-catch
+  kHunt: 25, // extra pull toward likely-King cells, scaled by gap to gold
 };
+
+// How much the King's 100 still matters: 1 when far from gold, 0 once safe.
+function needGold(state) {
+  const gap = GOLD_THRESHOLD - state.score;
+  if (gap <= 0) return 0;
+  return Math.min(1, gap / 350);
+}
 
 // --- shared per-decision context -------------------------------------------
 
@@ -244,6 +252,13 @@ export function rankMoves(state, weights = DEFAULT_WEIGHTS, ctx = buildContext(s
     const pScored = pChain + pScore;
     terms.bingo = pScored * (bt.step * weights.bingoStep + bt.complete * weights.bingoComplete);
     terms.info = fiveTurnPending && hand !== 5 ? infoGain(state, ctx, cell) * weights.info : 0;
+    // Dynamic King hunt: locating the K locks a guaranteed 100 for the
+    // K-turn; worth more the further we are from gold (on top of the static
+    // fodderKing share already in the EV).
+    terms.king =
+      hand !== KING && state.remaining[KING] > 0
+        ? ctx.pVal(cell, KING) * weights.kHunt * needGold(state)
+        : 0;
     // Burning one of the few safe 5-flip targets before the 5-turn.
     let reserve = 0;
     if (fiveTurnPending && state.handIndex < 10 && safeFiveCells > 0 && safeFiveCells <= 4) {
@@ -252,7 +267,8 @@ export function rankMoves(state, weights = DEFAULT_WEIGHTS, ctx = buildContext(s
       }
     }
     terms.reserve = reserve;
-    const score = terms.ev + terms.chain + terms.bingo + terms.info + terms.reserve;
+    const score =
+      terms.ev + terms.chain + terms.bingo + terms.info + terms.king + terms.reserve;
     out.push({ kind: 'reveal', cell, score, terms });
   }
 
